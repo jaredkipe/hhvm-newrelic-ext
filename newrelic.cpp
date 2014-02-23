@@ -156,6 +156,24 @@ public:
 			config_loaded = true;
 
 	}
+	
+	void requestInit() {
+		if (!m_threadInited) {
+			m_threadInited = true;
+      		threadInit();
+		}
+	}
+
+	bool m_threadInited;
+	
+	void threadInit() {
+		IniSetting::Bind(
+		this, IniSetting::PHP_INI_ALL,
+		"newrelic.license", "",
+		ini_on_update_stdstring, ini_get_stdstring,
+		&license_key
+		);
+	}
 
 	virtual void moduleInit () {
 		if (config_loaded) init_newrelic();
@@ -173,6 +191,10 @@ public:
 		HHVM_FE(newrelic_get_scoped_database_segment);
 
 		loadSystemlib();
+	}
+	
+	virtual void requestShutdown() {
+		//raise_warning("Request Shutdown");
 	}
 
 private:
