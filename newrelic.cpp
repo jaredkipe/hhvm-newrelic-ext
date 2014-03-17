@@ -125,10 +125,15 @@ const StaticString
   s__NR_ERROR_CALLBACK("NewRelicExtensionHelper::errorCallback"),
   s__SERVER("_SERVER"),
   s__REQUEST_URI("REQUEST_URI"),
-  s__SCRIPT_NAME("SCRIPT_NAME");
+  s__SCRIPT_NAME("SCRIPT_NAME"),
+  s__newrelic_ext_name("session");
+
 
 static class NewRelicExtension : public Extension {
 public:
+	std::string license_key;
+	bool m_threadInited;
+
 	NewRelicExtension () : Extension("newrelic") {
 		config_loaded = false;
 	}
@@ -171,8 +176,18 @@ public:
 			config_loaded = true;
 
 	}
+	
+	virtual void threadInit() {
+		Extension* ext = Extension::GetExtension(s__newrelic_ext_name);
+		assert(ext);
+		
+		IniSetting::Bind(ext, "newrelic.license",          "ffff",
+		ini_on_update_stdstring,            ini_get_stdstring,
+		&license_key);
+		
+	}
 
-
+	  
 	virtual void moduleInit () {
 		if (config_loaded) init_newrelic();
 
@@ -199,6 +214,10 @@ public:
 	}
 
 	virtual void requestInit() {
+		if (!m_threadInited) {
+			m_threadInited = true;
+			threadInit();
+		}
 		f_set_error_handler(s__NR_ERROR_CALLBACK);
 		//TODO: make it possible to disable that via ini
 		GlobalVariables *g = get_global_variables();
@@ -210,7 +229,6 @@ public:
 	}
 
 private:
-	std::string license_key;
 	std::string app_name;
 	std::string app_language;
 	std::string app_language_version;
